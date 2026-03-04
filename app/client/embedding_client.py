@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.core.exceptions import ExternalServiceError
 
 COHERE_EMBED_MODEL = "embed-multilingual-v3.0"
-EMBED_DIMENSION = 1024  # fixed for multilingual-v3.0
+EMBED_DIMENSION = 1024  
 
 
 class CohereEmbeddingClient:

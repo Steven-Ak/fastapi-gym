@@ -38,6 +38,8 @@ app = FastAPI(
 )
 
 
+
+
 @app.exception_handler(NotFoundError)
 async def not_found_handler(_: Request, exc: NotFoundError):
     return JSONResponse(status_code=404, content={"detail": exc.detail})

@@ -14,7 +14,6 @@ class GroqLLMClient:
         self._client = AsyncGroq(api_key=api_key or settings.GROQ_API_KEY)
         self._model = model
 
-
     async def _chat(self, system: str, user: str, *, json_mode: bool = False) -> str:
         kwargs: dict = {
             "model": self._model,
@@ -44,6 +43,7 @@ class GroqLLMClient:
 
         return json.loads(text)
 
+    
 
     async def generate_workout_plan(self, profile: dict) -> dict:
         system = """أنت مدرب لياقة بدنية محترف. أنشئ خطة تدريب مخصصة باللغة العربية.
@@ -82,6 +82,125 @@ class GroqLLMClient:
             return self._parse_json(raw)
         except Exception:
             raise ExternalServiceError(detail=f"LLM returned invalid JSON: {raw[:300]}")
+
+
+            
+    async def generate_nutrition_plan(
+        self,
+        goal: str,
+        weight: float,
+        height: float,
+        calorie_target: int,
+        diseases: str | None,
+        allergies: str | None,
+        rag_context: str,
+    ) -> dict:
+        system = (
+            "أنت خبير تغذية رياضية. "
+            "أرجع فقط JSON صالح بدون أي نص أو markdown. "
+            "استخدم فقط الأطعمة من قاعدة المعرفة المقدمة."
+        )
+
+        user = f"""أنشئ خطة تغذية شهرية (30 يوم) بالعربية.
+
+══════════════════════════════════
+معلومات العضو:
+══════════════════════════════════
+- الهدف: {goal}
+- الوزن: {weight} كجم | الطول: {height} سم
+- السعرات اليومية المستهدفة: {calorie_target} سعرة
+- الأمراض: {diseases or 'لا يوجد'}
+- الحساسيات: {allergies or 'لا يوجد'}
+
+══════════════════════════════════
+قاعدة المعرفة الغذائية (استخدمها كمرجع أساسي):
+══════════════════════════════════
+{rag_context}
+
+══════════════════════════════════
+القواعد الصارمة:
+══════════════════════════════════
+1. أرجع JSON فقط بدون أي نص إضافي
+2. استخدم الأطعمة من قاعدة المعرفة أعلاه فقط
+3. تجنب تماماً الأطعمة الممنوعة بسبب الأمراض أو الحساسيات
+4. التزم بـ {calorie_target} ± 100 سعرة يومياً
+5. نوّع الوجبات بين الأيام الـ30
+
+الهيكل المطلوب:
+{{
+  "days": {{
+    "day_1": {{
+      "breakfast": {{"meal": "...", "items": ["..."], "calories": 0}},
+      "snack_1":   {{"meal": "...", "items": ["..."], "calories": 0}},
+      "lunch":     {{"meal": "...", "items": ["..."], "calories": 0}},
+      "snack_2":   {{"meal": "...", "items": ["..."], "calories": 0}},
+      "dinner":    {{"meal": "...", "items": ["..."], "calories": 0}}
+    }},
+    "day_2": {{}},
+    ...
+    "day_30": {{}}
+  }},
+  "daily_totals": {{
+    "target_calories": {calorie_target},
+    "protein_percent": 0,
+    "carbs_percent": 0,
+    "fat_percent": 0,
+    "water_liters": 0
+  }}
+}}"""
+
+        raw = await self._chat(system, user, json_mode=True)
+
+        try:
+            return self._parse_json(raw)
+        except Exception:
+            raise ExternalServiceError(detail=f"LLM returned invalid JSON: {raw[:300]}")
+
+    
+
+    async def ask_nutrition_question(
+        self,
+        question: str,
+        calorie_target: int | None,
+        diseases: str | None,
+        allergies: str | None,
+        rag_context: str,
+        plan_snippet: str,
+    ) -> str:
+        system = (
+            "أنت مدرب تغذية رياضية متخصص اسمك GymIQ Coach. "
+            "أجب دائماً بالعربية. "
+            "استخدم قاعدة المعرفة الغذائية وخطة التغذية الحالية للعضو كمرجع أساسي. "
+            "لا تقترح أبداً أي طعام يتعارض مع أمراض أو حساسيات العضو. "
+            "أجوبتك يجب أن تكون عملية ومحددة بالكميات والسعرات."
+        )
+
+        user = f"""══════════════════════════════════
+سؤال العضو: {question}
+══════════════════════════════════
+
+معلومات العضو:
+- السعرات اليومية: {calorie_target} سعرة
+- الأمراض: {diseases or 'لا يوجد'}
+- الحساسيات: {allergies or 'لا يوجد'}
+
+══════════════════════════════════
+قاعدة المعرفة الغذائية:
+══════════════════════════════════
+{rag_context}
+
+══════════════════════════════════
+خطة التغذية الحالية للعضو (عينة أول أسبوع):
+══════════════════════════════════
+{plan_snippet}
+
+أجب على سؤال العضو بناءً على:
+1. قاعدة المعرفة الغذائية أعلاه
+2. خطته الحالية
+3. حالته الصحية وحساسياته
+كن محدداً بالكميات والسعرات."""
+
+        return await self._chat(system, user)
         
     # These methods are to be added inside the GroqLLMClient class in llm_client.py
 # Ensure `import json` is at the top of llm_client.py (it already is)

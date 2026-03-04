@@ -1,18 +1,148 @@
-"""
-VectorDocumentRepository — upsert and similarity search for vector_documents.
-All operations are scoped to a gym_id.
-"""
-
-from uuid import UUID
-
-from sqlalchemy import delete, select, text, func
+import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy import select, text, delete, func
 from app.models.vector_document_model import VectorDocument
+from app.client.embedding_client import CohereEmbeddingClient
 
 
 class VectorDocumentRepository:
 
+    async def insert_chunk(
+        self,
+        db: AsyncSession,
+        gym_id: uuid.UUID,
+        doc_type: str,
+        source_id: str,
+        content: str,
+        metadata: dict,
+        embedding: list[float],
+    ) -> VectorDocument:
+        doc = VectorDocument(
+            gym_id    = gym_id,
+            doc_type  = doc_type,
+            source_id = source_id,
+            content   = content,
+            metadata_ = metadata,
+            embedding = embedding,
+        )
+        db.add(doc)
+        await db.flush()
+        return doc
+
+    async def chunk_exists(
+        self,
+        db: AsyncSession,
+        gym_id: uuid.UUID,
+        source_id: str,
+    ) -> bool:
+        result = await db.execute(
+            select(VectorDocument.id).where(
+                VectorDocument.gym_id    == gym_id,
+                VectorDocument.source_id == source_id,
+            )
+        )
+        return result.scalar() is not None
+
+    async def search_similar(
+        self,
+        db: AsyncSession,
+        gym_id: uuid.UUID,
+        query_embedding: list[float],
+        doc_type_prefix: str | None = None,
+        top_k: int = 5,
+    ) -> list[dict]:
+        where = "gym_id = :gym_id"
+        params: dict = {
+            "gym_id"   : str(gym_id),
+            "embedding": str(query_embedding),
+            "top_k"    : top_k,
+        }
+
+        if doc_type_prefix:
+            where += " AND doc_type LIKE :doc_type_prefix"
+            params["doc_type_prefix"] = f"{doc_type_prefix}%"
+
+        stmt = text(f"""
+            SELECT id, content, metadata, doc_type, source_id,
+                   1 - (embedding <=> :embedding::vector) AS similarity
+            FROM vector_documents
+            WHERE {where}
+            ORDER BY embedding <=> :embedding::vector
+            LIMIT :top_k
+        """)
+
+        result = await db.execute(stmt, params)
+        rows   = result.fetchall()
+
+        return [
+            {
+                "id"        : str(row.id),
+                "content"   : row.content,
+                "metadata"  : row.metadata,
+                "doc_type"  : row.doc_type,
+                "source_id" : row.source_id,
+                "similarity": round(float(row.similarity), 4),
+            }
+            for row in rows
+        ]
+
+    async def delete_by_gym_and_type(
+        self,
+        db: AsyncSession,
+        gym_id: uuid.UUID,
+        doc_type_prefix: str,
+    ) -> int:
+        result = await db.execute(
+            text("""
+                DELETE FROM vector_documents
+                WHERE gym_id = :gym_id AND doc_type LIKE :prefix
+            """),
+            {"gym_id": str(gym_id), "prefix": f"{doc_type_prefix}%"}
+        )
+        return result.rowcount
+
+    async def embed_nutrition_chunks(
+        self,
+        db: AsyncSession,
+        gym_id: uuid.UUID,
+        chunks: list[dict],
+        embedder: CohereEmbeddingClient,
+        batch_size: int = 10,
+    ) -> dict:
+        inserted = 0
+        skipped  = 0
+
+        for i in range(0, len(chunks), batch_size):
+            batch      = chunks[i : i + batch_size]
+            texts      = [c["embed_text"] for c in batch]
+            embeddings = await embedder.embed_documents(texts)
+
+            for c, emb in zip(batch, embeddings):
+                source_id = f"nutrition_{c['topic']}"
+
+                exists = await self.chunk_exists(db, gym_id, source_id)
+                if exists:
+                    skipped += 1
+                    continue
+
+                await self.insert_chunk(
+                    db        = db,
+                    gym_id    = gym_id,
+                    doc_type  = "nutrition",
+                    source_id = source_id,
+                    content   = c["embed_text"],
+                    metadata  = {
+                        "tags"   : c.get("tags", []),
+                        "text_ar": c.get("text_ar"),
+                        "text_en": c.get("text_en"),
+                        "topic"  : c.get("topic"),
+                    },
+                    embedding = emb,
+                )
+                inserted += 1
+
+        await db.commit()
+        return {"inserted": inserted, "skipped": skipped, "total": len(chunks)}
     async def delete_by_gym_and_type(self, db: AsyncSession, gym_id: UUID, doc_type: str) -> int:
         """Delete all docs for a gym of a given type before re-seeding."""
         result = await db.execute(
