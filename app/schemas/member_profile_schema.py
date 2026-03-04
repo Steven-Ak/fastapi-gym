@@ -14,6 +14,21 @@ class ProfileUpdateRequest(BaseModel):
     diseases: Optional[str] = None
     allergies: Optional[str] = None
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "goal": "build_muscle",
+                "weight_kg": 80.0,
+                "height_cm": 175.0,
+                "days_per_week": 4,
+                "level": "intermediate",
+                "injuries": "knee pain",
+                "diseases": "diabetes",
+                "allergies": "lactose"
+            }
+        }
+    }
+
 
 class MemberProfileUpsert(ProfileUpdateRequest):
     pass

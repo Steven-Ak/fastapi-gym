@@ -1,20 +1,20 @@
-from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
 from app.core.security import hash_password, verify_password, create_access_token
+from app.core.exceptions import AlreadyExistsError, AuthenticationError, AuthorizationError
 from app.models.member_model import Member
-from app.repositories.member_repository import MemberRepository
+from app.repositories.base import MemberRepositoryProtocol
 
 
 class AuthService:
-    def __init__(self, repo: MemberRepository):
+    def __init__(self, repo: MemberRepositoryProtocol):
         self.repo = repo
 
     async def register(self, db: AsyncSession, name: str, phone: str, password: str, gym_id: UUID) -> dict:
         existing = await self.repo.get_by_phone_and_gym(db, phone, gym_id)
         if existing:
-            raise HTTPException(status_code=400, detail="Phone already registered in this gym")
+            raise AlreadyExistsError(detail="Phone already registered in this gym")
 
         member = Member(
             name=name,
@@ -38,13 +38,13 @@ class AuthService:
     async def login(self, db: AsyncSession, phone: str, password: str, gym_id: UUID) -> dict:
         member = await self.repo.get_by_phone_and_gym(db, phone, gym_id)
         if not member:
-            raise HTTPException(status_code=401, detail="Phone number not found")
+            raise AuthenticationError(detail="Phone number not found")
 
         if not member.is_member_active:
-            raise HTTPException(status_code=403, detail="Membership is inactive")
+            raise AuthorizationError(detail="Membership is inactive")
 
         if not verify_password(password, member.password_hash):
-            raise HTTPException(status_code=401, detail="Incorrect password")
+            raise AuthenticationError(detail="Incorrect password")
 
         token = create_access_token({"member_id": str(member.id), "gym_id": str(member.gym_id)})
         return {

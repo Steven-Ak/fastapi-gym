@@ -1,6 +1,7 @@
 import uuid
 from sqlalchemy import Column, Integer, Boolean, TIMESTAMP, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -18,3 +19,6 @@ class WorkoutPlan(Base):
 
     adapted_from_id = Column(UUID(as_uuid=True), nullable=True)
     generated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    member = relationship("Member", back_populates="workout_plans", lazy="selectin")

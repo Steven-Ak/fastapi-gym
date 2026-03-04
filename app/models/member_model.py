@@ -1,6 +1,7 @@
 import uuid
 from sqlalchemy import Column, String, Boolean, TIMESTAMP, ForeignKey, UniqueConstraint, Text
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -23,3 +24,8 @@ class Member(Base):
 
     is_member_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    gym = relationship("Gym", back_populates="members", lazy="selectin")
+    profile = relationship("MemberProfile", back_populates="member", uselist=False, lazy="selectin")
+    workout_plans = relationship("WorkoutPlan", back_populates="member", lazy="selectin")

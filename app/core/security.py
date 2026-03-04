@@ -3,9 +3,9 @@ from typing import Any
 
 from jose import jwt, JWTError
 from passlib.context import CryptContext
-from fastapi import HTTPException, status
 
 from app.core.config import settings
+from app.core.exceptions import AuthenticationError
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -28,7 +28,4 @@ def decode_access_token(token: str) -> dict[str, Any]:
     try:
         return jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-        )
+        raise AuthenticationError(detail="Invalid or expired token")

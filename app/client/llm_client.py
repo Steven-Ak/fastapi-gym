@@ -1,46 +1,61 @@
-from groq import AsyncGroq
-from app.core.config import settings
-from fastapi import HTTPException
+"""
+Groq LLM client — implements LLMClientProtocol.
+"""
+
 import json
 import re
 
-client = AsyncGroq(api_key=settings.GROQ_API_KEY)
-MODEL = "llama-3.3-70b-versatile"
+from groq import AsyncGroq
+
+from app.core.config import settings
+from app.core.exceptions import ExternalServiceError
 
 
-async def _chat(system: str, user: str) -> str:
-    response = await client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user}
-        ],
-        temperature=0.7,
-    )
-    return response.choices[0].message.content
+class GroqLLMClient:
+    """Concrete LLM client backed by Groq / Llama."""
 
+    def __init__(self, api_key: str | None = None, model: str = "llama-3.3-70b-versatile"):
+        self._client = AsyncGroq(api_key=api_key or settings.GROQ_API_KEY)
+        self._model = model
 
-def _parse_json(raw: str) -> dict:
-    text = raw.strip()
+    # ── internal helpers ───────────────────────────────────────────────
 
-    text = re.sub(r"^```json\s*", "", text)
-    text = re.sub(r"^```\s*", "", text)
-    text = re.sub(r"\s*```$", "", text).strip()
+    async def _chat(self, system: str, user: str, *, json_mode: bool = False) -> str:
+        kwargs: dict = {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "temperature": 0.7,
+            "max_tokens": 4096,
+        }
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+        response = await self._client.chat.completions.create(**kwargs)
+        return response.choices[0].message.content
 
-    
-    if not text.startswith("{"):
-        m = re.search(r"\{.*\}", text, flags=re.S)
-        if m:
-            text = m.group(0)
+    @staticmethod
+    def _parse_json(raw: str) -> dict:
+        text = raw.strip()
+        text = re.sub(r"^```json\s*", "", text)
+        text = re.sub(r"^```\s*", "", text)
+        text = re.sub(r"\s*```$", "", text).strip()
 
-    return json.loads(text)
+        if not text.startswith("{"):
+            m = re.search(r"\{.*\}", text, flags=re.S)
+            if m:
+                text = m.group(0)
 
+        return json.loads(text)
 
-async def generate_workout_plan(profile: dict) -> dict:
-    system = """أنت مدرب لياقة بدنية محترف. أنشئ خطة تدريب مخصصة باللغة العربية.
+    # ── public API (fulfils LLMClientProtocol) ─────────────────────────
+
+    async def generate_workout_plan(self, profile: dict) -> dict:
+        system = """أنت مدرب لياقة بدنية محترف. أنشئ خطة تدريب مخصصة باللغة العربية.
 أجب فقط بـ JSON صحيح بدون أي نص إضافي."""
 
-    user = f"""أنشئ خطة تدريب 4 أسابيع للعضو:
+        user = f"""أنشئ خطة تدريب 4 أسابيع للعضو:
 - الهدف: {profile.get('goal')}
 - المستوى: {profile.get('level')}
 - أيام التدريب: {profile.get('days_per_week')} أيام/أسبوع
@@ -67,12 +82,9 @@ async def generate_workout_plan(profile: dict) -> dict:
   "general_tips": ["نصيحة 1", "نصيحة 2"]
 }}"""
 
-    raw = await _chat(system, user)
+        raw = await self._chat(system, user, json_mode=True)
 
-    try:
-        return _parse_json(raw)
-    except Exception:
-        raise HTTPException(
-            status_code=502,
-            detail=f"LLM returned invalid JSON: {raw[:300]}"
-        )
+        try:
+            return self._parse_json(raw)
+        except Exception:
+            raise ExternalServiceError(detail=f"LLM returned invalid JSON: {raw[:300]}")

@@ -1,6 +1,7 @@
 import uuid
 from sqlalchemy import Column, String, Integer, Float, TIMESTAMP, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -25,3 +26,6 @@ class MemberProfile(Base):
     allergies = Column(String, nullable=True)
 
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Relationships
+    member = relationship("Member", back_populates="profile", lazy="selectin")
