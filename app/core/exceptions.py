@@ -1,11 +1,3 @@
-"""
-Domain-specific exceptions for GymIQ.
-
-Services raise these instead of HTTPException.
-A global handler in main.py maps them to HTTP responses.
-"""
-
-
 class AppError(Exception):
     """Base for all domain errors."""
     def __init__(self, detail: str = "An unexpected error occurred"):
