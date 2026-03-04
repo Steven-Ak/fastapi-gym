@@ -67,15 +67,9 @@ async def embed_nutrition_knowledge(
     db: AsyncSession = Depends(get_db),
     current: Member = Depends(get_current_member),
 ):
-    content = await file.read()
-    try:
-        chunks = json.loads(content)["chunks"]
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON — expected nutrition_rag_chunks.json")
-
     result = await vector_service.embed_knowledge(
         db     = db,
         gym_id = uuid.UUID(gym_id),
-        chunks = chunks,
+        file   = file,
     )
-    return {"status": "done ", **result}
+    return result
