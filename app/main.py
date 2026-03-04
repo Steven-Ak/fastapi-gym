@@ -13,10 +13,12 @@ from app.core.exceptions import (
     ExternalServiceError,
 )
 
-from app.models.gym_model import Gym 
-from app.models.member_model import Member  
+from app.models.gym_model import Gym  
+from app.models.member_model import Member 
 from app.models.member_profile_model import MemberProfile  
-from app.models.workout_plan_model import WorkoutPlan 
+from app.models.workout_plan_model import WorkoutPlan  
+from app.models.qa_log_model import QALog
+from app.models.vector_document_model import VectorDocument
 
 from app.routers import router
 
