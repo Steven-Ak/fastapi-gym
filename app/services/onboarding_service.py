@@ -1,8 +1,3 @@
-"""
-Onboarding service — owns the Q1–Q6 state machine, validation,
-and profile assembly. Extracted from the router for SRP.
-"""
-
 import re
 from uuid import UUID
 

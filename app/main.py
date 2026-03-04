@@ -13,12 +13,12 @@ from app.core.exceptions import (
     ExternalServiceError,
 )
 
-from app.models.gym_model import Gym  # noqa: F401
-from app.models.member_model import Member  # noqa: F401
-from app.models.member_profile_model import MemberProfile  # noqa: F401
-from app.models.workout_plan_model import WorkoutPlan  # noqa: F401
+from app.models.gym_model import Gym 
+from app.models.member_model import Member  
+from app.models.member_profile_model import MemberProfile  
+from app.models.workout_plan_model import WorkoutPlan 
 
-from app.routers import api_router
+from app.routers import router
 
 
 @asynccontextmanager
@@ -36,7 +36,7 @@ app = FastAPI(
 )
 
 
-# ── Domain-exception → HTTP-response mapping ──────────────────────────
+
 
 @app.exception_handler(NotFoundError)
 async def not_found_handler(_: Request, exc: NotFoundError):
