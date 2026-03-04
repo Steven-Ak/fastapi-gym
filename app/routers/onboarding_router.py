@@ -16,7 +16,7 @@ from app.services.member_profile_service import MemberProfileService
 from app.services.workout_plan_service import WorkoutPlanService
 from app.services.onboarding_service import OnboardingService
 
-router = APIRouter(tags=["Feature 1 — Onboarding"])
+router = APIRouter(tags=["Onboarding"])
 
 
 def _get_onboarding_service() -> OnboardingService:
