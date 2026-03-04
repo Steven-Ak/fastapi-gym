@@ -47,3 +47,9 @@ class ExternalServiceError(AppError):
     """Raised when an external service (LLM, etc.) fails."""
     def __init__(self, detail: str = "External service unavailable"):
         super().__init__(detail)
+
+
+class BadRequestError(AppError):
+    """Raised for invalid or conflicting requests."""
+    def __init__(self, detail: str = "Bad request"):
+        super().__init__(detail)

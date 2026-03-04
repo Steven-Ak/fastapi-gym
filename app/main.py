@@ -11,14 +11,17 @@ from app.core.exceptions import (
     AuthorizationError,
     ValidationError,
     ExternalServiceError,
+    BadRequestError,
 )
 
 from app.models.gym_model import Gym  # noqa: F401
 from app.models.member_model import Member  # noqa: F401
 from app.models.member_profile_model import MemberProfile  # noqa: F401
 from app.models.workout_plan_model import WorkoutPlan  # noqa: F401
+from app.models.checkin_model import Checkin  # noqa: F401
 
 from app.routers import api_router
+from app.routers.checkin_router import router as checkin_router
 
 
 @asynccontextmanager
@@ -36,7 +39,6 @@ app = FastAPI(
 )
 
 
-# ── Domain-exception → HTTP-response mapping ──────────────────────────
 
 @app.exception_handler(NotFoundError)
 async def not_found_handler(_: Request, exc: NotFoundError):
@@ -68,5 +70,10 @@ async def external_service_handler(_: Request, exc: ExternalServiceError):
     return JSONResponse(status_code=502, content={"detail": exc.detail})
 
 
-#Router
-app.include_router(router)
+@app.exception_handler(BadRequestError)
+async def bad_request_handler(_: Request, exc: BadRequestError):
+    return JSONResponse(status_code=400, content={"detail": exc.detail})
+
+
+app.include_router(api_router)
+app.include_router(checkin_router)

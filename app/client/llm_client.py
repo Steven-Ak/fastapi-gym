@@ -88,3 +88,5 @@ class GroqLLMClient:
             return self._parse_json(raw)
         except Exception:
             raise ExternalServiceError(detail=f"LLM returned invalid JSON: {raw[:300]}")
+
+LLMClient = GroqLLMClient
