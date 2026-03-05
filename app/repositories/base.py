@@ -1,0 +1,53 @@
+from typing import Protocol, runtime_checkable
+from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+@runtime_checkable
+class MemberRepositoryProtocol(Protocol):
+    async def get_by_id(self, db: AsyncSession, member_id: UUID): ...
+    async def get_by_phone_and_gym(self, db: AsyncSession, phone: str, gym_id: UUID): ...
+    async def create(self, db: AsyncSession, member): ...
+    async def update_step(self, db: AsyncSession, member_id: UUID, step: str | None): ...
+
+
+@runtime_checkable
+class MemberProfileRepositoryProtocol(Protocol):
+    async def get_by_member(self, db: AsyncSession, member_id: UUID): ...
+    async def upsert(self, db: AsyncSession, member_id: UUID, data: dict): ...
+
+
+@runtime_checkable
+class WorkoutPlanRepositoryProtocol(Protocol):
+    async def get_active(self, db: AsyncSession, member_id: UUID): ...
+    async def create(self, db: AsyncSession, member_id: UUID, plan_json: dict): ...
+
+
+@runtime_checkable
+class GymRepositoryProtocol(Protocol):
+    async def get_by_id(self, db: AsyncSession, gym_id: UUID): ...
+    async def get_all(self, db: AsyncSession): ...
+    async def create(self, db: AsyncSession, gym): ...
+
+
+@runtime_checkable
+class VectorDocumentRepositoryProtocol(Protocol):
+    async def delete_by_gym_and_type(self, db: AsyncSession, gym_id: UUID, doc_type: str) -> int: ...
+    async def bulk_insert(self, db: AsyncSession, docs: list) -> int: ...
+    async def similarity_search(
+        self, db: AsyncSession, gym_id: UUID, embedding: list[float],
+        top_k: int = 5, doc_type: str = "exercise",
+    ) -> list: ...
+
+
+@runtime_checkable
+class QALogRepositoryProtocol(Protocol):
+    async def create(
+        self, db: AsyncSession, member_id: UUID, question: str, answer: str,
+        rag_context: list[dict] | None = None, log_type: str = "exercise",
+    ): ...
+    async def get_by_member(
+        self, db: AsyncSession, member_id: UUID,
+        log_type: str = "exercise", limit: int = 20,
+    ) -> list: ...
