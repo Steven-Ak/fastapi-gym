@@ -11,6 +11,7 @@ from app.core.exceptions import (
     AuthorizationError,
     ValidationError,
     ExternalServiceError,
+    BadRequestError,
 )
 
 from app.models.gym_model import Gym  
@@ -70,5 +71,10 @@ async def external_service_handler(_: Request, exc: ExternalServiceError):
     return JSONResponse(status_code=502, content={"detail": exc.detail})
 
 
-#Router
-app.include_router(router)
+@app.exception_handler(BadRequestError)
+async def bad_request_handler(_: Request, exc: BadRequestError):
+    return JSONResponse(status_code=400, content={"detail": exc.detail})
+
+
+app.include_router(api_router)
+app.include_router(checkin_router)
