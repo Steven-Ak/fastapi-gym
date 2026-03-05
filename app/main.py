@@ -17,7 +17,8 @@ from app.core.exceptions import (
 from app.models.gym_model import Gym  
 from app.models.member_model import Member 
 from app.models.member_profile_model import MemberProfile  
-from app.models.workout_plan_model import WorkoutPlan  
+from app.models.workout_plan_model import WorkoutPlan 
+from app.models.checkin_model import CheckIn 
 from app.models.qa_log_model import QALog
 from app.models.vector_document_model import VectorDocument
 
@@ -76,5 +77,4 @@ async def bad_request_handler(_: Request, exc: BadRequestError):
     return JSONResponse(status_code=400, content={"detail": exc.detail})
 
 
-app.include_router(api_router)
-app.include_router(checkin_router)
+app.include_router(router)
