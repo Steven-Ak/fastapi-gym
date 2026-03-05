@@ -14,14 +14,14 @@ from app.core.exceptions import (
     BadRequestError,
 )
 
-from app.models.gym_model import Gym  # noqa: F401
-from app.models.member_model import Member  # noqa: F401
-from app.models.member_profile_model import MemberProfile  # noqa: F401
-from app.models.workout_plan_model import WorkoutPlan  # noqa: F401
-from app.models.checkin_model import Checkin  # noqa: F401
+from app.models.gym_model import Gym  
+from app.models.member_model import Member 
+from app.models.member_profile_model import MemberProfile  
+from app.models.workout_plan_model import WorkoutPlan  
+from app.models.qa_log_model import QALog
+from app.models.vector_document_model import VectorDocument
 
-from app.routers import api_router
-from app.routers.checkin_router import router as checkin_router
+from app.routers import router
 
 
 @asynccontextmanager
@@ -37,6 +37,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
 
 
 

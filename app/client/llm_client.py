@@ -1,7 +1,3 @@
-"""
-Groq LLM client — implements LLMClientProtocol.
-"""
-
 import json
 import re
 
@@ -17,8 +13,6 @@ class GroqLLMClient:
     def __init__(self, api_key: str | None = None, model: str = "llama-3.3-70b-versatile"):
         self._client = AsyncGroq(api_key=api_key or settings.GROQ_API_KEY)
         self._model = model
-
-    # ── internal helpers ───────────────────────────────────────────────
 
     async def _chat(self, system: str, user: str, *, json_mode: bool = False) -> str:
         kwargs: dict = {
@@ -49,7 +43,7 @@ class GroqLLMClient:
 
         return json.loads(text)
 
-    # ── public API (fulfils LLMClientProtocol) ─────────────────────────
+    
 
     async def generate_workout_plan(self, profile: dict) -> dict:
         system = """أنت مدرب لياقة بدنية محترف. أنشئ خطة تدريب مخصصة باللغة العربية.
